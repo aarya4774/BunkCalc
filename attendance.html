@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance & Bunk Calculator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Simple focus style for better accessibility */
+        input:focus {
+            box-shadow: 0 0 0 2px theme('colors.indigo.500');
+            outline: none;
+        }
+        
+        /* Fade-in and slide-up animation */
+        @keyframes fadeInSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in-slide-up {
+            animation: fadeInSlideUp 0.6s ease-out forwards;
+        }
+
+        /* Gradient border for the card */
+        .card-gradient-border {
+            position: relative;
+            background-color: theme('colors.white');
+            z-index: 1;
+        }
+        
+        .card-gradient-border::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(to right, theme('colors.indigo.500'), theme('colors.purple.500'), theme('colors.pink.500'));
+            border-radius: 0.875rem; /* 14px, xl is 12px */
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        .dark .card-gradient-border {
+             background-color: theme('colors.gray.800');
+        }
+
+        .dark .card-gradient-border::before {
+            opacity: 0.5;
+        }
+
+        /* Style for the progress bar transition */
+        #gauge-bar {
+            transition: width 0.6s ease-out, background-color 0.6s ease-out;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4 font-sans antialiased overflow-hidden">
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-75 dark:bg-opacity-80 backdrop-blur-md transition-opacity duration-500 ease-in-out">
+        <div class="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 animate-fade-in-slide-up">
+            <form id="welcome-form">
+                <h2 class="text-2xl font-bold text-center text-gray-900 dark:text-white mb-4">Welcome!</h2>
+                <p class="text-center text-gray-600 dark:text-gray-300 mb-6">Which college are you from? (Acronym)</p>
+                
+                <div id="welcome-input-group">
+                    <label for="college-acronym" class="sr-only">College Acronym</label>
+                    <input type="text" id="college-acronym" name="college-acronym" placeholder="E.g., MIT" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-indigo-500 transition duration-200" required>
+                    
+                    <button type"submit" id="proceed-btn" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-0.5">
+                        Proceed
+                    </button>
+                </div>
+
+                <div id="special-message" class="hidden text-center text-2xl font-bold text-red-500 dark:text-red-400 py-6">
+                    <!-- Special message appears here -->
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Main Calculator (Initially hidden) -->
+    <div id="calculator-container" class="w-full max-w-md opacity-0 transition-opacity duration-500 ease-in-out">
+        <!-- Main Card -->
+        <div class="card-gradient-border rounded-xl shadow-2xl overflow-hidden backdrop-blur-lg dark:bg-opacity-80">
+            <div class="px-6 py-8 md:px-10">
+                <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white">
+                    Attendance & Bunk Calculator
+                </h1>
+                <p class="text-center text-gray-600 dark:text-gray-300 mt-2">
+                    Check your percentage and how many classes you can bunk.
+                </p>
+
+                <!-- Input Form -->
+                <form id="attendance-form" class="mt-8 space-y-5">
+                    <div>
+                        <label for="required-percentage" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Required Attendance %</label>
+                        <input type="number" id="required-percentage" name="required-percentage" placeholder="E.g., 75" min="1" max="100" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-indigo-500 transition duration-200" required>
+                    </div>
+
+                    <div>
+                        <label for="held-lectures" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Total Lectures Held So Far</label>
+                        <input type="number" id="held-lectures" name="held-lectures" placeholder="E.g., 80" min="0" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-indigo-500 transition duration-200" required>
+                    </div>
+
+                    <div>
+                        <label for="attended-lectures" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Lectures Attended So Far</label>
+                        <input type="number" id="attended-lectures" name="attended-lectures" placeholder="E.g., 70" min="0" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:border-indigo-500 transition duration-200" required>
+                    </div>
+
+                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Calculate
+                    </button>
+                </form>
+            </div>
+
+            <!-- Result Area -->
+            <div id="result-container" class="px-6 pb-6 md:px-10 hidden">
+                
+                <!-- Visual Attendance Gauge -->
+                <div id="gauge-container" class="mb-4 hidden">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Current Percentage</span>
+                        <span id="gauge-percentage-text" class="text-sm font-bold text-gray-900 dark:text-white">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                        <div id="gauge-bar" class="h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="result-message" class="text-center p-4 rounded-lg text-lg font-medium">
+                    <!-- Message will be injected here -->
+                </div>
+            </div>
+        </div>
+        
+        <p class="text-center text-gray-500 dark:text-gray-400 text-sm mt-4">
+            Made with &hearts;
+        </p>
+    </div>
+
+    <script>
+        const form = document.getElementById('attendance-form');
+        const resultContainer = document.getElementById('result-container');
+        const resultMessage = document.getElementById('result-message');
+        
+        // Gauge elements
+        const gaugeContainer = document.getElementById('gauge-container');
+        const gaugeBar = document.getElementById('gauge-bar');
+        const gaugePercentageText = document.getElementById('gauge-percentage-text');
+        
+        // Welcome screen elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const welcomeForm = document.getElementById('welcome-form');
+        const welcomeInputGroup = document.getElementById('welcome-input-group');
+        const collegeInput = document.getElementById('college-acronym');
+        const specialMessage = document.getElementById('special-message');
+        const calculatorContainer = document.getElementById('calculator-container');
+
+        // Welcome screen logic
+        welcomeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const college = collegeInput.value.trim().toLowerCase();
+
+            if (college === 'adcet') {
+                // Show special message
+                welcomeInputGroup.classList.add('hidden');
+                specialMessage.textContent = 'WOOOO!';
+                specialMessage.classList.remove('hidden');
+
+                // Wait 1.5 seconds, then fade out
+                setTimeout(startFadeOut, 1500);
+            } else {
+                // Fade out immediately
+                startFadeOut();
+            }
+        });
+        
+        function startFadeOut() {
+            // Fade out welcome screen
+            welcomeScreen.classList.add('opacity-0');
+            welcomeScreen.classList.add('pointer-events-none');
+
+            // Fade in calculator
+            calculatorContainer.classList.remove('opacity-0');
+            calculatorContainer.classList.add('animate-fade-in-slide-up');
+            
+            // Optional: remove welcome screen from DOM after transition
+            setTimeout(() => {
+                welcomeScreen.classList.add('hidden');
+            }, 500); // Match transition duration
+        }
+
+        // Calculator logic
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent form from submitting
+
+            // Get all values as numbers
+            const requiredPercentage = parseFloat(document.getElementById('required-percentage').value);
+            const heldLectures = parseInt(document.getElementById('held-lectures').value);
+            const attendedLectures = parseInt(document.getElementById('attended-lectures').value);
+
+            // --- Validation ---
+            if (isNaN(requiredPercentage) || isNaN(heldLectures) || isNaN(attendedLectures)) {
+                hideGauge();
+                showMessage('Please fill in all fields with valid numbers.', 'error');
+                return;
+            }
+
+            if (attendedLectures > heldLectures) {
+                hideGauge();
+                showMessage('Lectures attended cannot be more than lectures held.', 'error');
+                return;
+            }
+
+            // --- Calculation Logic ---
+            let currentPercentage = 0;
+            if (heldLectures > 0) {
+                currentPercentage = (attendedLectures / heldLectures) * 100;
+            } else if (attendedLectures > 0) {
+                 hideGauge();
+                 showMessage('Lectures attended cannot be more than lectures held.', 'error');
+                return;
+            } else {
+                currentPercentage = 100; // No lectures held, so 100%
+            }
+            
+            if (currentPercentage >= requiredPercentage) {
+                // User is safe, calculate how many classes they can bunk
+                const bunksAllowed = Math.floor((attendedLectures * 100 / requiredPercentage) - heldLectures);
+                
+                if (bunksAllowed > 0) {
+                     updateGauge(currentPercentage, 'success');
+                     showMessage(`<strong>Your attendance is ${currentPercentage.toFixed(2)}%.</strong><br>You are safely above ${requiredPercentage}%. You can bunk <strong>${bunksAllowed} more class(es)</strong> in a row.`, 'success');
+                } else {
+                    updateGauge(currentPercentage, 'warning');
+                    showMessage(`<strong>Your attendance is ${currentPercentage.toFixed(2)}%.</strong><br>You are on the edge. Do not bunk any more classes!`, 'warning');
+                }
+
+            } else {
+                // User is in danger, calculate how many classes they must attend
+                
+                // Handle edge case: cannot reach 100% if already missed
+                if (requiredPercentage == 100) {
+                     updateGauge(currentPercentage, 'error');
+                     showMessage(`<strong>Your attendance is ${currentPercentage.toFixed(2)}%.</strong><br>You are below 100%. You can never catch up!`, 'error');
+                     return;
+                }
+
+                const classesToAttend = Math.ceil((requiredPercentage * heldLectures - attendedLectures * 100) / (100 - requiredPercentage));
+                
+                if (classesToAttend > 0) {
+                    updateGauge(currentPercentage, 'error');
+                    showMessage(`<strong>Your attendance is ${currentPercentage.toFixed(2)}%.</strong><br>You are below the required ${requiredPercentage}%. You must attend <strong>${classesToAttend} class(es)</strong> in a row to catch up.`, 'error');
+                } else {
+                    // This case should logically not be hit if current% < required%, but as a fallback:
+                     updateGauge(currentPercentage, 'error');
+                     showMessage(`<strong>Your attendance is ${currentPercentage.toFixed(2)}%.</strong><br>You are below the required ${requiredPercentage}%.`, 'error');
+                }
+            }
+        });
+
+        /**
+         * Updates the visual attendance gauge.
+         * @param {number} percentage - The current attendance percentage.
+         * @param {'success' | 'warning' | 'error'} type - The status type.
+         */
+        function updateGauge(percentage, type) {
+            // Set text
+            gaugePercentageText.textContent = `${percentage.toFixed(2)}%`;
+
+            // Clear old colors
+            gaugeBar.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+
+            // Set new color
+            if (type === 'success') {
+                gaugeBar.classList.add('bg-green-500');
+            } else if (type === 'warning') {
+                gaugeBar.classList.add('bg-yellow-500');
+            } else { // error
+                gaugeBar.classList.add('bg-red-500');
+            }
+
+            // Set bar width (use requestAnimationFrame for smooth CSS transition)
+            requestAnimationFrame(() => {
+                gaugeBar.style.width = `${Math.min(percentage, 100)}%`;
+            });
+            
+            gaugeContainer.classList.remove('hidden');
+        }
+
+        /** Hides the attendance gauge. */
+        function hideGauge() {
+            gaugeContainer.classList.add('hidden');
+            gaugeBar.style.width = '0%';
+        }
+
+        /**
+         * Displays a message in the result container.
+         * @param {string} html - The HTML content for the message.
+         * @param {'success' | 'warning' | 'error'} type - The type of message.
+         */
+        function showMessage(html, type) {
+            let icon = '';
+            if (type === 'success') {
+                icon = '😎'; // Sunglasses
+            } else if (type === 'warning') {
+                icon = '😅'; // Nervous
+            } else { // error
+                icon = '😱'; // Panic
+            }
+
+            resultMessage.innerHTML = `<div class="flex items-center justify-center"><span class="text-3xl mr-3">${icon}</span><span>${html}</span></div>`;
+
+            // Clear old classes
+            resultMessage.classList.remove('bg-green-100', 'text-green-800', 'dark:bg-green-900', 'dark:text-green-200',
+                                           'bg-yellow-100', 'text-yellow-800', 'dark:bg-yellow-900', 'dark:text-yellow-200',
+                                           'bg-red-100', 'text-red-800', 'dark:bg-red-900', 'dark:text-red-200');
+
+            // Add new classes based on type
+            if (type === 'success') {
+                resultMessage.classList.add('bg-green-100', 'text-green-800', 'dark:bg-green-900', 'dark:text-green-200');
+            } else if (type === 'warning') {
+                resultMessage.classList.add('bg-yellow-100', 'text-yellow-800', 'dark:bg-yellow-900', 'dark:text-yellow-200');
+            } else { // error
+                resultMessage.classList.add('bg-red-100', 'text-red-800', 'dark:bg-red-900', 'dark:text-red-200');
+            }
+            
+            resultContainer.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
