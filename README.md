@@ -71,7 +71,7 @@ if (college === 'adcet') {
     welcomeInputGroup.classList.add('hidden');
 
     // --- EDIT THIS LINE ---
-    specialMessage.textContent = 'gaand lagtiye'; 
+    specialMessage.textContent = 'WOOOO!'; 
     // --- EDIT THIS LINE ---
 
     specialMessage.classList.remove('hidden');
@@ -83,4 +83,4 @@ if (college === 'adcet') {
 }
 
 
-Change 'gaand lagtiye' to any message you want. You can also change the if (college === 'adcet') condition to target a different acronym.
+Change 'WOOOO!' to any message you want. You can also change the if (college === 'adcet') condition to target a different acronym.
